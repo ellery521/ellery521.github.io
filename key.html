@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>激活码生成器</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; max-width: 400px; margin: 40px auto; padding: 20px; }
+        input, button { width: 100%; padding: 12px; margin: 8px 0; font-size: 16px; box-sizing: border-box; }
+        button { background: #007AFF; color: white; border: none; border-radius: 8px; }
+        .result { background: #f5f5f5; padding: 15px; margin-top: 20px; border-radius: 8px; word-break: break-all; }
+        .copy-btn { background: #34C759; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h2>激活码生成器</h2>
+    <input type="text" id="machineId" placeholder="输入机器码">
+    <input type="number" id="days" value="30" placeholder="有效天数">
+    <button onclick="generate()">生成激活码</button>
+    <div class="result" id="result" style="display:none">
+        <div id="code"></div>
+        <div id="info"></div>
+        <button class="copy-btn" onclick="copyCode()">复制激活码</button>
+    </div>
+
+<script>
+const SECRET_KEY = "JiangJiang_Mole_2024_Secret";
+
+async function sha256(message) {
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function randomHex(bytes) {
+    const arr = new Uint8Array(bytes);
+    crypto.getRandomValues(arr);
+    return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function generate() {
+    const machineId = document.getElementById('machineId').value.trim();
+    const days = parseInt(document.getElementById('days').value) || 30;
+    
+    if (!machineId) { alert('请输入机器码'); return; }
+    
+    const expireTime = Math.floor(Date.now() / 1000) + days * 86400;
+    const randomPart = randomHex(4);
+    const data = `${machineId}_${expireTime}_${randomPart}`;
+    const signature = (await sha256(`${data}_${SECRET_KEY}`)).slice(0, 16);
+    const codeRaw = `${data}_${signature}`;
+    const code = btoa(codeRaw);
+    const formatted = code.match(/.{1,4}/g).join('-');
+    
+    const expireDate = new Date(expireTime * 1000).toLocaleString();
+    
+    document.getElementById('code').innerHTML = `<strong>激活码:</strong><br>${formatted}`;
+    document.getElementById('info').innerHTML = `<br>过期时间: ${expireDate}`;
+    document.getElementById('result').style.display = 'block';
+    window.generatedCode = formatted;
+}
+
+function copyCode() {
+    navigator.clipboard.writeText(window.generatedCode);
+    alert('已复制');
+}
+</script>
+</body>
+</html>
