@@ -4,7 +4,167 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>激活码生成器</title>
-    <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/crypto-js.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            width: 100%;
+            max-width: 480px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        input.error {
+            border-color: #dc3545;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+        button:active { 
+            transform: translateY(0); 
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .result {
+            margin-top: 24px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+        .result.show { 
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .result-label {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+        .result-value {
+            font-family: 'Cascadia Code', 'Consolas', monospace;
+            font-size: 14px;
+            color: #333;
+            word-break: break-all;
+            margin-bottom: 12px;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+        .code-value {
+            font-size: 13px;
+            color: #667eea;
+            font-weight: 600;
+        }
+        .copy-btn {
+            padding: 8px 16px;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        .error-msg {
+            color: #dc3545;
+            font-size: 13px;
+            margin-top: 4px;
+            display: none;
+        }
+        .error-msg.show { 
+            display: block; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>激活码生成器</h1>
+        
+        <div class="form-group">
+            <label>机器码</label>
+            <input type="text" id="machineId" placeholder="输入12位机器码（字母和数字）" maxlength="12">
+            <div class="error-msg" id="machineError"></div>
+        </div>
+        
+        <div class="form-group">
+            <label>有效期</label>
+            <select id="validDays">
+                <option value="7">7天</option>
+                <option value="30" selected>30天</option>
+                <option value="90">90天</option>
+                <option value="180">180天</option>
+                <option value="365">365天</option>
+                <option value="9999">永久</option>
+            </select>
+        </div>
+        
+        <button id="generateBtn" onclick="generate()">生成激活码</button>
+        
+        <div class="result" id="result">
+            <div class="result-label">激活码</div>
+            <div class="result-value code-value" id="codeOutput"></div>
+            <div class="result-label">绑定机器</div>
+            <div class="result-value" id="machineOutput"></div>
+            <div class="result-label">过期时间</div>
+            <div class="result-value" id="expireOutput"></div>
+            <button class="copy-btn" onclick="copyCode()">复制激活码</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js" crossorigin="anonymous"></script>
     <script>
     // BLAKE2b implementation
     var blakejs = (function() {
@@ -109,273 +269,180 @@
         }
         return { blake2b: blake2b };
     })();
-    </script>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        .container {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            padding: 40px;
-            width: 100%;
-            max-width: 480px;
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 30px;
-            font-size: 24px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #555;
-            font-weight: 500;
-        }
-        input, select {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-        }
-        input:focus, select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        button {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-        }
-        button:active { transform: translateY(0); }
-        .result {
-            margin-top: 24px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            display: none;
-        }
-        .result.show { display: block; }
-        .result-label {
-            font-size: 12px;
-            color: #888;
-            margin-bottom: 4px;
-        }
-        .result-value {
-            font-family: 'Cascadia Code', 'Consolas', monospace;
-            font-size: 14px;
-            color: #333;
-            word-break: break-all;
-            margin-bottom: 12px;
-            padding: 10px;
-            background: white;
-            border-radius: 4px;
-            border: 1px solid #e0e0e0;
-        }
-        .code-value {
-            font-size: 13px;
-            color: #667eea;
-            font-weight: 600;
-        }
-        .copy-btn {
-            padding: 8px 16px;
-            font-size: 14px;
-            margin-top: 8px;
-        }
-        .history {
-            margin-top: 30px;
-            border-top: 1px solid #e0e0e0;
-            padding-top: 20px;
-        }
-        .history h3 {
-            font-size: 14px;
-            color: #888;
-            margin-bottom: 12px;
-        }
-        .history-item {
-            font-size: 12px;
-            padding: 8px;
-            background: #f8f9fa;
-            border-radius: 4px;
-            margin-bottom: 8px;
-            cursor: pointer;
-        }
-        .history-item:hover { background: #e9ecef; }
-        .history-item .machine { color: #667eea; font-weight: 500; }
-        .history-item .expire { color: #888; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1> 激活码生成器</h1>
-        
-        <div class="form-group">
-            <label>机器码</label>
-            <input type="text" id="machineId" placeholder="输入12位机器码" maxlength="12">
-        </div>
-        
-        <div class="form-group">
-            <label>有效期</label>
-            <select id="validDays">
-                <option value="7">7天</option>
-                <option value="30" selected>30天</option>
-                <option value="90">90天</option>
-                <option value="180">180天</option>
-                <option value="365">365天</option>
-                <option value="9999">永久</option>
-            </select>
-        </div>
-        
-        <button onclick="generate()">生成激活码</button>
-        
-        <div class="result" id="result">
-            <div class="result-label">激活码</div>
-            <div class="result-value code-value" id="codeOutput"></div>
-            <div class="result-label">绑定机器</div>
-            <div class="result-value" id="machineOutput"></div>
-            <div class="result-label">过期时间</div>
-            <div class="result-value" id="expireOutput"></div>
-            <button class="copy-btn" onclick="copyCode()">复制激活码</button>
-        </div>
-        
-        <div class="history" id="history" style="display:none;">
-            <h3>生成历史</h3>
-            <div id="historyList"></div>
-        </div>
-    </div>
 
-    <script>
-        const SECRET = 'JiangJiang_Mole_2024_Secret';
+    const SECRET = 'JiangJiang_Mole_2024_Secret';
+    let isReady = false;
+    
+    // 等待CryptoJS加载完成
+    function initializeCrypto() {
+        if (typeof CryptoJS !== 'undefined') {
+            isReady = true;
+            console.log('Crypto libraries loaded successfully');
+        } else {
+            setTimeout(initializeCrypto, 100);
+        }
+    }
+    
+    function deriveKey(secret, saltBytes) {
+        return CryptoJS.PBKDF2(secret, CryptoJS.lib.WordArray.create(new Uint8Array(saltBytes)), {
+            keySize: 256/32,
+            iterations: 10000,
+            hasher: CryptoJS.algo.SHA256
+        });
+    }
+    
+    function computeSignature(data, secret) {
+        const saltHash = CryptoJS.MD5(data);
+        const saltBytes = [];
+        for (let i = 0; i < saltHash.words.length; i++) {
+            const w = saltHash.words[i];
+            saltBytes.push((w >>> 24) & 0xff, (w >>> 16) & 0xff, (w >>> 8) & 0xff, w & 0xff);
+        }
+        const derived = deriveKey(secret, saltBytes);
+        const h1 = CryptoJS.HmacSHA256(data, derived);
+        const h1Bytes = [];
+        for (let i = 0; i < 8; i++) {
+            const w = h1.words[i];
+            h1Bytes.push((w >>> 24) & 0xff, (w >>> 16) & 0xff, (w >>> 8) & 0xff, w & 0xff);
+        }
+        const derivedBytes = [];
+        for (let i = 0; i < 8; i++) {
+            const w = derived.words[i];
+            derivedBytes.push((w >>> 24) & 0xff, (w >>> 16) & 0xff, (w >>> 8) & 0xff, w & 0xff);
+        }
+        const combined = new Uint8Array([...h1Bytes, ...derivedBytes]);
+        const h2 = blakejs.blake2b(combined, null, 16);
+        return Array.from(h2).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 20);
+    }
+    
+    function validateMachineId(machineId) {
+        const errorMsg = document.getElementById('machineError');
+        const input = document.getElementById('machineId');
+        errorMsg.classList.remove('show');
+        input.classList.remove('error');
         
-        function deriveKey(secret, saltBytes) {
-            return CryptoJS.PBKDF2(secret, CryptoJS.lib.WordArray.create(new Uint8Array(saltBytes)), {
-                keySize: 256/32,
-                iterations: 10000,
-                hasher: CryptoJS.algo.SHA256
-            });
+        if (!machineId) {
+            errorMsg.textContent = '请输入机器码';
+            errorMsg.classList.add('show');
+            input.classList.add('error');
+            return false;
         }
         
-        function computeSignature(data, secret) {
-            const saltHash = CryptoJS.MD5(data);
-            const saltBytes = [];
-            for (let i = 0; i < saltHash.words.length; i++) {
-                const w = saltHash.words[i];
-                saltBytes.push((w >>> 24) & 0xff, (w >>> 16) & 0xff, (w >>> 8) & 0xff, w & 0xff);
-            }
-            const derived = deriveKey(secret, saltBytes);
-            const h1 = CryptoJS.HmacSHA256(data, derived);
-            const h1Bytes = [];
-            for (let i = 0; i < 8; i++) {
-                const w = h1.words[i];
-                h1Bytes.push((w >>> 24) & 0xff, (w >>> 16) & 0xff, (w >>> 8) & 0xff, w & 0xff);
-            }
-            const derivedBytes = [];
-            for (let i = 0; i < 8; i++) {
-                const w = derived.words[i];
-                derivedBytes.push((w >>> 24) & 0xff, (w >>> 16) & 0xff, (w >>> 8) & 0xff, w & 0xff);
-            }
-            const combined = new Uint8Array([...h1Bytes, ...derivedBytes]);
-            const h2 = blakejs.blake2b(combined, null, 16);
-            return Array.from(h2).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 20);
+        if (machineId.length !== 12) {
+            errorMsg.textContent = '机器码必须是12位';
+            errorMsg.classList.add('show');
+            input.classList.add('error');
+            return false;
         }
         
-        function generate() {
-            try {
-                const machineId = document.getElementById('machineId').value.trim().toUpperCase();
-                const validDays = parseInt(document.getElementById('validDays').value);
-                
-                if (!machineId || machineId.length !== 12) {
-                    alert('请输入12位机器码');
-                    return;
-                }
-                
-                const expireTime = Math.floor(Date.now() / 1000) + validDays * 86400;
-                const randomPart = Array.from(crypto.getRandomValues(new Uint8Array(6)))
-                    .map(b => b.toString(16).padStart(2, '0')).join('');
-                const version = '02';
-                const data = `${version}:${machineId}:${expireTime}:${randomPart}`;
-                const signature = computeSignature(data, SECRET);
-                const codeRaw = `${data}:${signature}`;
-                const code = btoa(codeRaw);
-                const formatted = code.match(/.{1,5}/g).join('-');
-                
-                const expireDate = new Date(expireTime * 1000);
-                const expireStr = expireDate.toLocaleString('zh-CN');
-                
-                document.getElementById('codeOutput').textContent = formatted;
-                document.getElementById('machineOutput').textContent = machineId;
-                document.getElementById('expireOutput').textContent = expireStr;
-                document.getElementById('result').classList.add('show');
-                
-                saveHistory(machineId, formatted, expireStr);
-            } catch(e) {
-                alert('错误: ' + e.message);
-                console.error(e);
-            }
+        if (!/^[A-Z0-9]+$/.test(machineId)) {
+            errorMsg.textContent = '机器码只能包含大写字母和数字';
+            errorMsg.classList.add('show');
+            input.classList.add('error');
+            return false;
         }
         
-        function copyCode() {
-            const code = document.getElementById('codeOutput').textContent;
-            navigator.clipboard.writeText(code).then(() => {
-                const btn = document.querySelector('.copy-btn');
-                btn.textContent = '已复制!';
-                setTimeout(() => btn.textContent = '复制激活码', 1500);
-            });
+        return true;
+    }
+    
+    function generate() {
+        const btn = document.getElementById('generateBtn');
+        
+        if (!isReady) {
+            alert('系统正在初始化，请稍候...');
+            return;
         }
         
-        function saveHistory(machine, code, expire) {
-            let history = JSON.parse(localStorage.getItem('keygenHistory') || '[]');
-            history.unshift({ machine, code, expire, time: new Date().toLocaleString('zh-CN') });
-            if (history.length > 10) history = history.slice(0, 10);
-            localStorage.setItem('keygenHistory', JSON.stringify(history));
-            renderHistory();
-        }
-        
-        function renderHistory() {
-            const history = JSON.parse(localStorage.getItem('keygenHistory') || '[]');
-            const container = document.getElementById('history');
-            const list = document.getElementById('historyList');
+        try {
+            btn.disabled = true;
             
-            if (history.length === 0) {
-                container.style.display = 'none';
+            const machineId = document.getElementById('machineId').value.trim().toUpperCase();
+            const validDays = parseInt(document.getElementById('validDays').value);
+            
+            if (!validateMachineId(machineId)) {
+                btn.disabled = false;
                 return;
             }
             
-            container.style.display = 'block';
-            list.innerHTML = history.map(h => `
-                <div class="history-item" onclick="navigator.clipboard.writeText('${h.code}')">
-                    <span class="machine">${h.machine}</span>
-                    <span class="expire">${h.expire}</span>
-                </div>
-            `).join('');
+            const expireTime = Math.floor(Date.now() / 1000) + validDays * 86400;
+            const randomPart = Array.from(crypto.getRandomValues(new Uint8Array(6)))
+                .map(b => b.toString(16).padStart(2, '0')).join('');
+            const version = '02';
+            const data = `${version}:${machineId}:${expireTime}:${randomPart}`;
+            const signature = computeSignature(data, SECRET);
+            const codeRaw = `${data}:${signature}`;
+            const code = btoa(codeRaw);
+            const formatted = code.match(/.{1,5}/g).join('-');
+            
+            const expireDate = new Date(expireTime * 1000);
+            const expireStr = validDays === 9999 ? '永久有效' : expireDate.toLocaleString('zh-CN');
+            
+            document.getElementById('codeOutput').textContent = formatted;
+            document.getElementById('machineOutput').textContent = machineId;
+            document.getElementById('expireOutput').textContent = expireStr;
+            document.getElementById('result').classList.add('show');
+            
+            btn.disabled = false;
+        } catch(e) {
+            alert('生成失败: ' + e.message);
+            console.error('Error:', e);
+            btn.disabled = false;
         }
+    }
+    
+    function copyCode() {
+        const code = document.getElementById('codeOutput').textContent;
         
-        renderHistory();
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '已复制';
+                btn.style.background = '#28a745';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '';
+                }, 1500);
+            }).catch(err => {
+                console.error('Copy failed:', err);
+                fallbackCopy(code);
+            });
+        } else {
+            fallbackCopy(code);
+        }
+    }
+    
+    function fallbackCopy(text) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            alert('激活码已复制');
+        } catch(err) {
+            console.error('Fallback copy failed:', err);
+            alert('复制失败，请手动复制: ' + text);
+        }
+        document.body.removeChild(textArea);
+    }
+    
+    // 输入框处理
+    document.getElementById('machineId').addEventListener('input', function(e) {
+        this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    });
+    
+    // 回车键生成
+    document.getElementById('machineId').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            generate();
+        }
+    });
+    
+    // 初始化
+    initializeCrypto();
     </script>
 </body>
 </html>
